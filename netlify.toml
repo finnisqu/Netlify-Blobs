@@ -1,1 +1,17 @@
+[build]
+  functions = "netlify/functions"
+
+# Pretty API path
+[[redirects]]
+  from = "/api/share"
+  to = "/.netlify/functions/share"
+  status = 200
+  force = true
+
+# Shortlinks: /s/:id  ->  your Squarespace CAD-Lite with ?id=...
+[[redirects]]
+  from = "/s/:id"
+  to = "https://YOUR-SQUARESPACE-DOMAIN.com/cad-lite?id=:id"
+  status = 301
+  force = true
 
