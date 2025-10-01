@@ -4,14 +4,15 @@
 # Pretty API path
 [[redirects]]
   from = "/api/share"
-  to = "/.netlify/functions/share"
+  to   = "/.netlify/functions/share"
   status = 200
-  force = true
+  force  = true
 
-# Shortlinks: /s/:id  ->  your Squarespace CAD-Lite with ?id=...
+# Shortlinks:
+# Visiting https://<your-netlify-site>/s/AB12cd34 will 301-redirect users
+# to your Squarespace app with ?id=AB12cd34
 [[redirects]]
   from = "/s/:id"
-  to = "https://YOUR-SQUARESPACE-DOMAIN.com/cad-lite?id=:id"
+  to   = "https://www.worldstoneonline.com/cad-lite?id=:id"
   status = 301
-  force = true
-
+  force  = true
