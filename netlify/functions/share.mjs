@@ -13,10 +13,11 @@ const ALLOWED_ORIGINS = new Set([
 function cors(origin) {
   const allow = ALLOWED_ORIGINS.has(origin) ? origin : "https://www.worldstoneonline.com";
   return {
-    "content-type": "application/json; charset=utf-8",
-    "access-control-allow-origin": allow,
-    "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type"
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": allow,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "content-type",
+    "Vary": "Origin"
   };
 }
 
