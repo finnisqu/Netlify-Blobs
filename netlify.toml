@@ -1,3 +1,4 @@
+# already present:
 [build]
   functions = "netlify/functions"
 
@@ -7,9 +8,26 @@
   status = 200
   force  = true
 
-# Shortlinks to Squarespace with ?id=
 [[redirects]]
   from = "/s/:id"
   to   = "https://www.worldstoneonline.com/cad-lite?id=:id"
   status = 301
   force  = true
+
+# NEW: add CORS headers for the API path (covers preflight at the edge)
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://www.worldstoneonline.com"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "content-type"
+    Vary = "Origin"
+
+# NEW: also add for the raw function path (belt & suspenders)
+[[headers]]
+  for = "/.netlify/functions/share"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://www.worldstoneonline.com"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "content-type"
+    Vary = "Origin"
