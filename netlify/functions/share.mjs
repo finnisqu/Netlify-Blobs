@@ -4,20 +4,35 @@ import { customAlphabet } from "nanoid";
 // Short, URL-safe IDs (no lookalikes). 8 chars ≈ 47 bits.
 const makeId = customAlphabet("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz", 8);
 
-// Allow Squarespace to call this API.
-const CORS = {
-  "content-type": "application/json; charset=utf-8",
-  "access-control-allow-origin": "https://www.worldstoneonline.com",
-  "access-control-allow-methods": "GET,POST,OPTIONS",
-  "access-control-allow-headers": "content-type"
-};
+// Allow your Squarespace origins
+const ALLOWED_ORIGINS = new Set([
+  "https://www.worldstoneonline.com",
+  "https://worldstoneonline.com",
+  // add any preview/staging origins if you use them:
+  // "https://worldstoneonline.squarespace.com"
+]);
+
+function corsHeaders(origin) {
+  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://www.worldstoneonline.com";
+  return {
+    "content-type": "application/json; charset=utf-8",
+    "access-control-allow-origin": allowOrigin,
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type",
+    // optional: if you ever send cookies, also add:
+    // "access-control-allow-credentials": "true"
+  };
+}
 
 export default async (req) => {
+  const origin = req.headers.get("origin") || "";
+  const CORS = corsHeaders(origin);
+  const store = getStore({ name: "cadlite-shares" });
+
+  // Preflight: MUST return the CORS headers
   if (req.method === "OPTIONS") {
     return new Response("", { status: 204, headers: CORS });
   }
-
-  const store = getStore({ name: "cadlite-shares" }); // site-wide KV store
 
   try {
     if (req.method === "POST") {
@@ -31,13 +46,12 @@ export default async (req) => {
         v: 1,
         createdAt: Date.now(),
         expiresAt: ttlDays ? Date.now() + ttlDays * 86400_000 : null,
-      // Store the raw snapshot object you send from the client
-        snapshot
+        snapshot,
       };
 
       await store.set(id, JSON.stringify(envelope));
-      const origin = new URL(req.url).origin;
-      return new Response(JSON.stringify({ id, url: `${origin}/s/${id}` }), { status: 201, headers: CORS });
+      const originUrl = new URL(req.url).origin;
+      return new Response(JSON.stringify({ id, url: `${originUrl}/s/${id}` }), { status: 201, headers: CORS });
     }
 
     if (req.method === "GET") {
@@ -51,11 +65,13 @@ export default async (req) => {
       if (data.expiresAt && Date.now() > data.expiresAt) {
         return new Response(JSON.stringify({ error: "Expired" }), { status: 410, headers: CORS });
       }
+
       return new Response(JSON.stringify({ id, snapshot: data.snapshot }), { status: 200, headers: CORS });
     }
 
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: CORS });
   } catch (e) {
+    // IMPORTANT: include CORS even on errors
     return new Response(JSON.stringify({ error: String(e.message || e) }), { status: 500, headers: CORS });
   }
 };
