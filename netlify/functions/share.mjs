@@ -27,9 +27,12 @@ export default async (req) => {
   const store = getStore({ name: "cadlite-shares" });
 
   // **Preflight**
-  if (req.method === "OPTIONS") {
-    return new Response("", { status: 204, headers: CORS });
-  }
+if (req.method === "OPTIONS") {
+  // 200 OK with no body is universally safe for CORS preflight
+  const headers = { ...CORS, "Access-Control-Max-Age": "86400", "Vary": "Origin" };
+  return new Response(null, { status: 200, headers });
+}
+
 
   try {
     if (req.method === "POST") {
