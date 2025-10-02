@@ -1,55 +1,52 @@
 import { getStore } from "@netlify/blobs";
 import { customAlphabet } from "nanoid";
 
-// Short, URL-safe IDs (no lookalikes). 8 chars ≈ 47 bits.
 const makeId = customAlphabet("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz", 8);
 
-// Allow your Squarespace origins
+// allow both www and apex; add any preview/staging origin if needed
 const ALLOWED_ORIGINS = new Set([
   "https://www.worldstoneonline.com",
   "https://worldstoneonline.com",
-  // add any preview/staging origins if you use them:
   // "https://worldstoneonline.squarespace.com"
 ]);
 
-function corsHeaders(origin) {
-  const allowOrigin = ALLOWED_ORIGINS.has(origin) ? origin : "https://www.worldstoneonline.com";
+function cors(origin) {
+  const allow = ALLOWED_ORIGINS.has(origin) ? origin : "https://www.worldstoneonline.com";
   return {
     "content-type": "application/json; charset=utf-8",
-    "access-control-allow-origin": allowOrigin,
+    "access-control-allow-origin": allow,
     "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type",
-    // optional: if you ever send cookies, also add:
-    // "access-control-allow-credentials": "true"
+    "access-control-allow-headers": "content-type"
   };
 }
 
 export default async (req) => {
   const origin = req.headers.get("origin") || "";
-  const CORS = corsHeaders(origin);
+  const CORS = cors(origin);
   const store = getStore({ name: "cadlite-shares" });
 
-  // Preflight: MUST return the CORS headers
+  // **Preflight**
   if (req.method === "OPTIONS") {
     return new Response("", { status: 204, headers: CORS });
   }
 
   try {
     if (req.method === "POST") {
-      const { snapshot, ttlDays = 90 } = await req.json();
-      if (!snapshot) {
-        return new Response(JSON.stringify({ error: "Missing snapshot" }), { status: 400, headers: CORS });
-      }
+      // Accept both JSON and text/plain bodies
+      let payload;
+      const ct = (req.headers.get("content-type") || "").toLowerCase();
+      payload = ct.includes("application/json") ? await req.json() : JSON.parse(await req.text());
+      const { snapshot, ttlDays = 90 } = payload;
+      if (!snapshot) return new Response(JSON.stringify({ error: "Missing snapshot" }), { status: 400, headers: CORS });
 
       const id = makeId();
-      const envelope = {
+      await store.set(id, JSON.stringify({
         v: 1,
         createdAt: Date.now(),
         expiresAt: ttlDays ? Date.now() + ttlDays * 86400_000 : null,
-        snapshot,
-      };
+        snapshot
+      }));
 
-      await store.set(id, JSON.stringify(envelope));
       const originUrl = new URL(req.url).origin;
       return new Response(JSON.stringify({ id, url: `${originUrl}/s/${id}` }), { status: 201, headers: CORS });
     }
@@ -71,7 +68,6 @@ export default async (req) => {
 
     return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: CORS });
   } catch (e) {
-    // IMPORTANT: include CORS even on errors
     return new Response(JSON.stringify({ error: String(e.message || e) }), { status: 500, headers: CORS });
   }
 };
